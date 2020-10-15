@@ -1,0 +1,1 @@
+document.getElementById('id1-option').innerText('Written from option js.')
