@@ -2,11 +2,12 @@
     "name":"necromancerV2",
     "version":"1.0",
     "manifest_version": 2,
-    "permissions" : ["tabs"],
+    "permissions" : ["tabs", "http://*/", "https://*/"],
     "description" : "A meaningful description goes here.",
     "background":{
         "page" : "background.html",
         "persistent": false
+        
     },
     "content_scripts": [
         {
@@ -20,6 +21,5 @@
         "default_title" : "Necromancer"
     },
     "options_page": "./options.html",
-    
     "content_security_policy": "script-src 'self' https://www.gstatic.com/ https://*.firebaseio.com; object-src 'self'"
 }
