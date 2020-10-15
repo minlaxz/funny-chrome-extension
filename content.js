@@ -1,39 +1,41 @@
-//Get current domain
-
-// alert(window.location.href)
-// window.open('width=600,height=600,scrollbars=no,resizable=no')
-// console.log('content.js : ', window.location.href)
-
-var switcher = true
-
-function f1() {
-    chrome.runtime.sendMessage({
-        action: 'updateIcon',
-        value: true
-    });
-    switcher = false
+/* script description
+This script will be injected every page
+and call to chrome runtime API
+API, lives in background.js
+*/
+function in_sync() {
+  chrome.runtime.sendMessage({
+    action: "update_icon",
+    value: window.location.href,
+  });
 }
+in_sync();
 
-function f2() {
-    chrome.runtime.sendMessage({
-        action: 'updateIcon',
-        value: false
-    });
-    switcher = true
-}
+/* not really need to set an interval loop.
+ * var set_int = setInterval( in_sync(), 3000 );
+ */
 
-var setint = setInterval( function () {
-    if (switcher) {
-        f1();
-    } else {
-        f2();
-    }
-} , 3000);
+/* TODO
+this wouldn't get called, when user choose
+`open in new window or new tab`
+but i really commonly used to choose
+`open in new` option alot.
+*/
 
 
 
-// chrome.tabs.query({ currentWindow : true, active: true }, function (tab) {
-//     chrome.tabs.sendMessage({command:"regular", data:tabs[0].id}, response => {
-//         console.log('fallback resopnse: ', response)
-//     })
-//   })
+/* Temp solution - Not working
+// chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => {
+//   chrome.tabs.sendMessage(
+//     {
+//       action: "update_icon",
+//       value: window.location.href,
+//     },
+//     //  data: tabs[0].id },
+//     (response) => {
+//       console.log("fallback response: ", response);
+//     }
+//   );
+// });
+*/
+

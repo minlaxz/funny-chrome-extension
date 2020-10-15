@@ -2,7 +2,7 @@
     "name":"necromancerV2",
     "version":"1.0",
     "manifest_version": 2,
-    "permissions" : ["tabs", "http://*/", "https://*/"],
+    "permissions" : ["tabs","activeTab", "http://*/", "https://*/"],
     "description" : "A meaningful description goes here.",
     "background":{
         "page" : "background.html",

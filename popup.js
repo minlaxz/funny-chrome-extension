@@ -6,13 +6,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function onclick() {
         chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
-            // chrome.tabs.sendMessage(tabs[0].id, 'href', responseParse)
-            chrome.runtime.sendMessage({ command: "post", data: "Domain" }, (response) => {
+            chrome.runtime.sendMessage({ action: "update_icon", value: tabs[0].id }, (response) => {
                 showData(response.data)
             })
         });
         // chrome.tabs.getCurrent(function(tab) {
-        //     chrome.runtime.sendMessage({command:"post", data: tab.url }, (response)=> {
+        //     chrome.runtime.sendMessage({action:"update_icon", value: tab.url }, (response)=> {
         //         showData(response.data)
         //     })
         // });
