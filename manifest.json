@@ -2,7 +2,7 @@
     "name":"necromancerV2",
     "version":"1.0",
     "manifest_version": 2,
-    "permissions" : ["tabs","activeTab", "http://*/", "https://*/"],
+    "permissions" : ["tabs","storage", "activeTab", "http://*/", "https://*/"],
     "description" : "A meaningful description goes here.",
     "background":{
         "page" : "background.html",
@@ -17,9 +17,9 @@
         }
     ],
     "browser_action" : {
-        "default_popup" : "popup.html",
+        "default_popup" : "popups/popup.html",
         "default_title" : "Necromancer"
     },
-    "options_page": "./options.html",
+    "options_page": "options/options.html",
     "content_security_policy": "script-src 'self' https://www.gstatic.com/ https://*.firebaseio.com; object-src 'self'"
 }
