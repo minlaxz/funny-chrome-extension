@@ -28,7 +28,7 @@ chrome.runtime.onMessage.addListener((request, sender, responseBack) => {
       console.log('responsed login signal.') //works
       console.log('extra : ', request.extra)
 
-      firebase.auth().currentUser ? console.log('already loggin!!!') : signin() ; 
+      firebase.auth().currentUser ? console.log('already loggin!!!') : signin();
       // console.log('sender : ', sender) // not useful
       break;
     }
@@ -36,7 +36,7 @@ chrome.runtime.onMessage.addListener((request, sender, responseBack) => {
       responseBack({ code: 200 })
       console.log('responsed logout signal.') //wroks
       console.log('extra : ', request.extra)
-      
+
       firebase.auth().currentUser ? signout() : console.log('already logged out!!!');
       // console.log('sender : ', sender) // not useful
       break;
@@ -84,6 +84,15 @@ var set_false = () => {
   });
 };
 
+var set_default = () => {
+  chrome.browserAction.setIcon({
+    path: {
+      19: "./flags/wrong19.png",
+      38: "./flags/wrong38.png",
+    },
+  });
+}
+
 // var ref = db.ref();
 // ref.once("value", (snap) => {console.log(snap.val())})
 
@@ -92,19 +101,20 @@ function signin() {
   firebase.auth().signInWithPopup(provider).then(function (result) {
     console.log(result.credential.accessToken);
   }).catch(function (error) {
-    console.log(error.code);
-    // var errorMessage = error.message;
-    // var email = error.email;
-    // var credential = error.credential;
+    console.log(error);
   });
 }
 
 function signout() {
-    firebase.auth().signOut().then(function () { alert("signed out."); })
-      .catch(function (error) { console.log(error); });
+  firebase.auth().signOut().then(function () {
+    console.log('bg : signed out.')
+  })
+    .catch(function (error) {
+      console.log('bg: sign out error. ' , error);
+    });
 }
 
-function send() {
+function send_test_message() {
   chrome.tabs.sendMessage(active_tab_id, { message: get_date() });
   console.log('sent to front.')
 }
