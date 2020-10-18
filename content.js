@@ -5,7 +5,7 @@ API, lives in background.js
 */
 
 var main = () => {
-  chrome.runtime.sendMessage({ action: "update_status" }, (res) => {
+  chrome.runtime.sendMessage({ action: "update" }, (res) => {
     switch (res.code) {
       case 201: { set_storage(); break; }
       default: { console.log("this is an error .-. "); }
