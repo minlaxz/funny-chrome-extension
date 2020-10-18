@@ -2,22 +2,12 @@ let active_tab_id = 0;
 let is_set = false;
 var d = new Date();
 
-const methods = {
-  0 : 'test',
-  1 : 'update_status',
-  2 : 'update_icon'
-}
-const responses = {
-  200 : 'ok.',
-  201 : 'created.',
-  400 : 'bad request!'
-}
-
 chrome.tabs.onActivated.addListener((tab) => {
   chrome.tabs.get(tab.tabId, (current_tab_info) => {
     active_tab_id = tab.tabId;
     console.log("bg : ", current_tab_info.url);
-    main(current_tab_info.url); /**evaluation goes here*/
+
+    // main(current_tab_info.url); // evaluation goes here
 
     // chrome.tabs.insertCSS(null, {file : "./mystyle.css"});
     // chrome.tabs.executeScript(null, { file: "./foreground.js" }, () => { }
@@ -26,33 +16,34 @@ chrome.tabs.onActivated.addListener((tab) => {
 
 chrome.runtime.onMessage.addListener((request, sender, responseBack) => {
   switch (request.action) {
-    case "update_status": {
-      /**Respond back to the frontend.*/
-      responseBack({ code: 201 }); 
-      console.log('responsed update status signal.')
+    case "update": {
+      responseBack({ code: 201 });  // Respond back to the frontend.*/
+      console.log('responsed update signal.')
+      console.log('sender : ', sender)
 
-      // var extracted = extractor(sender);
-      // console.log(extracted);
+      break;
+    }
+    case "login": {
+      responseBack({ code: 200 })
+      console.log('responsed login signal.') //works
+      console.log('extra : ', request.extra)
 
-      /**sender has a bunch of stuff to deal, this is great, take a look! */
-      //console.log("inside sender", sender); 
-       /**evaluation goes here*/
-      // main(request.value);
+      firebase.auth().currentUser ? console.log('already loggin!!!') : signin() ; 
+      // console.log('sender : ', sender) // not useful
       break;
     }
-    case "login" : {
-      responseBack({code: 200})
-      console.log('responsed login signal.')
+    case "logout": {
+      responseBack({ code: 200 })
+      console.log('responsed logout signal.') //wroks
+      console.log('extra : ', request.extra)
+      
+      firebase.auth().currentUser ? signout() : console.log('already logged out!!!');
+      // console.log('sender : ', sender) // not useful
       break;
     }
-    case "logout" : {
-      responseBack({code: 200})
-      console.log('responsed logout signal.')
-      break;
-    }
-    case "test" : {
-      responseBack({code: 200})
-      console.log('responsed test signal.')
+    case "test": {
+      responseBack({ code: 200 })
+      console.log('responsed TEST signal.')
       break;
     }
     default: {
@@ -64,13 +55,6 @@ chrome.runtime.onMessage.addListener((request, sender, responseBack) => {
 var get_date = () => {
   return new Date().toLocaleString()
 }
-
-var extractor = (obj) => {
-  return {
-    url: obj.url,
-    origin: obj.origin,
-  };
-};
 
 var main = (url) => {
   const pattern = new RegExp("https");
@@ -105,8 +89,10 @@ var set_false = () => {
 
 function signin() {
   var provider = new firebase.auth.GoogleAuthProvider();
-  firebase.auth().signInWithPopup(provider).then(function (result) { console.log(result.credential.accessToken);
-  }).catch(function (error) { console.log(error.code);
+  firebase.auth().signInWithPopup(provider).then(function (result) {
+    console.log(result.credential.accessToken);
+  }).catch(function (error) {
+    console.log(error.code);
     // var errorMessage = error.message;
     // var email = error.email;
     // var credential = error.credential;
@@ -114,10 +100,8 @@ function signin() {
 }
 
 function signout() {
-  if (firebase.auth.currentUser) {
     firebase.auth().signOut().then(function () { alert("signed out."); })
       .catch(function (error) { console.log(error); });
-  }
 }
 
 function send() {
