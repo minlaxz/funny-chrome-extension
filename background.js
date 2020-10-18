@@ -1,13 +1,18 @@
 let active_tab_id = 0;
 let is_set = false;
 var d = new Date();
+var logged_in;
+
+firebase.auth().onAuthStateChanged((user) => {
+  user ? logged_in = true : set_default();
+})
 
 chrome.tabs.onActivated.addListener((tab) => {
   chrome.tabs.get(tab.tabId, (current_tab_info) => {
     active_tab_id = tab.tabId;
     console.log("bg : ", current_tab_info.url);
 
-    // main(current_tab_info.url); // evaluation goes here
+    main(current_tab_info.url); // evaluation goes here
 
     // chrome.tabs.insertCSS(null, {file : "./mystyle.css"});
     // chrome.tabs.executeScript(null, { file: "./foreground.js" }, () => { }
@@ -18,18 +23,18 @@ chrome.runtime.onMessage.addListener((request, sender, responseBack) => {
   switch (request.action) {
     case "update": {
       responseBack({ code: 201 });  // Respond back to the frontend.*/
-      console.log('responsed update signal.')
-      console.log('sender : ', sender)
+      console.log('responsed update signal.', sender)
+
+      main(sender.url)
 
       break;
     }
     case "login": {
       responseBack({ code: 200 })
-      console.log('responsed login signal.') //works
-      console.log('extra : ', request.extra)
+      console.log('responsed login signal.', request.extra) //works
 
-      firebase.auth().currentUser ? console.log('already loggin!!!') : signin();
-      // console.log('sender : ', sender) // not useful
+      firebase.auth().currentUser ? console.log('something bad!') : signin();
+      console.log('sender : ', sender) // not useful
       break;
     }
     case "logout": {
@@ -37,7 +42,7 @@ chrome.runtime.onMessage.addListener((request, sender, responseBack) => {
       console.log('responsed logout signal.') //wroks
       console.log('extra : ', request.extra)
 
-      firebase.auth().currentUser ? signout() : console.log('already logged out!!!');
+      firebase.auth().currentUser ? signout() : console.log('something bad!'); //already logged out
       // console.log('sender : ', sender) // not useful
       break;
     }
@@ -58,37 +63,32 @@ var get_date = () => {
 
 var main = (url) => {
   const pattern = new RegExp("https");
-  pattern.test(url) ? set_true() : set_false();
+  set_icon(pattern.test(url))
 };
 
-/**
- * testing interval, but it is bad idea.
- * setInterval(() => { chrome.tabs.sendMessage(active_tab_id, { message: "handled from background." }); }, 3000);
- */
-
-var set_true = () => {
-  chrome.browserAction.setIcon({
-    path: {
-      19: "./flags/right19.png",
-      38: "./flags/right38.png",
-    },
-  });
-};
-
-var set_false = () => {
-  chrome.browserAction.setIcon({
-    path: {
-      19: "./flags/wrong19.png",
-      38: "./flags/wrong38.png",
-    },
-  });
-};
+var set_icon = (flag) => {
+  if (flag) {
+    chrome.browserAction.setIcon({
+      path: {
+        19: "./flags/right19.png",
+        38: "./flags/right38.png"
+      }
+    });
+  } else {
+    chrome.browserAction.setIcon({
+      path: {
+        19: "./flags/wrong19.png",
+        38: "./flags/wrong38.png"
+      }
+    });
+  }
+}
 
 var set_default = () => {
   chrome.browserAction.setIcon({
     path: {
-      19: "./flags/wrong19.png",
-      38: "./flags/wrong38.png",
+      19: "./icons/logo16.png",
+      38: "./icons/logo32.png"
     },
   });
 }
@@ -98,37 +98,33 @@ var set_default = () => {
 
 function signin() {
   var provider = new firebase.auth.GoogleAuthProvider();
-  firebase.auth().signInWithPopup(provider).then(function (result) {
-    console.log(result.credential.accessToken);
-  }).catch(function (error) {
-    console.log(error);
-  });
-}
-
-function signout() {
-  firebase.auth().signOut().then(function () {
-    console.log('bg : signed out.')
-  })
-    .catch(function (error) {
-      console.log('bg: sign out error. ' , error);
+  firebase.auth().signInWithPopup(provider)
+    .then((result) => {
+      console.log(result.credential.accessToken);
+    }).catch((error) => {
+      console.log(error);
     });
 }
 
-function send_test_message() {
-  chrome.tabs.sendMessage(active_tab_id, { message: get_date() });
-  console.log('sent to front.')
+function signout() {
+  firebase.auth().signOut()
+    .then(() => {
+      console.log('bg : signed out.')
+    })
+    .catch((error) => {
+      console.log('bg: sign out error. ', error);
+    });
 }
 
+/**
+ * testing interval, but it is bad idea.
+ * setInterval(() => { chrome.tabs.sendMessage(active_tab_id, { message: "handled from background." }); }, 3000);
+ */
 
-// firebase.auth().currentUser ? signout() : signin();
-
-// firebase.auth().onAuthStateChanged(function(user) {
-//   if (user) {
-//     alert('signed in.')
-//   } else {
-//     alert('signed out.')
-//   }
-// });
+// function send_test_message() {
+//   chrome.tabs.sendMessage(active_tab_id, { message: get_date() });
+//   console.log('sent to front.')
+// }
 
 // chrome.tabs.onUpdated.addListener((callback) => {
 //   console.log(callback)
