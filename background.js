@@ -1,40 +1,60 @@
 let active_tab_id = 0;
 let is_set = false;
+var d = new Date();
 
 chrome.tabs.onActivated.addListener((tab) => {
   chrome.tabs.get(tab.tabId, (current_tab_info) => {
     active_tab_id = tab.tabId;
     console.log("bg : ", current_tab_info.url);
-    main(current_tab_info.url); /**evaluation goes here*/
+
+    // main(current_tab_info.url); // evaluation goes here
 
     // chrome.tabs.insertCSS(null, {file : "./mystyle.css"});
     // chrome.tabs.executeScript(null, { file: "./foreground.js" }, () => { }
   });
 });
 
-chrome.runtime.onMessage.addListener((request, info, responseBack) => {
+chrome.runtime.onMessage.addListener((request, sender, responseBack) => {
   switch (request.action) {
-    case "update_status": {
-      responseBack({ code: 201 }); /**Respond back to the frontend.*/
-      var extracted = extractor(info)
-      console.log(extracted)
-      //console.log("from fg : ", request.value);
-      //console.log("inside sender", sender); /**sender has a bunch of stuff to deal, this is great, take a look! */
-      // main(request.value); /**evaluation goes here*/
+    case "update": {
+      responseBack({ code: 201 });  // Respond back to the frontend.*/
+      console.log('responsed update signal.')
+      console.log('sender : ', sender)
+
+      break;
+    }
+    case "login": {
+      responseBack({ code: 200 })
+      console.log('responsed login signal.') //works
+      console.log('extra : ', request.extra)
+
+      firebase.auth().currentUser ? console.log('already loggin!!!') : signin() ; 
+      // console.log('sender : ', sender) // not useful
+      break;
+    }
+    case "logout": {
+      responseBack({ code: 200 })
+      console.log('responsed logout signal.') //wroks
+      console.log('extra : ', request.extra)
+      
+      firebase.auth().currentUser ? signout() : console.log('already logged out!!!');
+      // console.log('sender : ', sender) // not useful
+      break;
+    }
+    case "test": {
+      responseBack({ code: 200 })
+      console.log('responsed TEST signal.')
       break;
     }
     default: {
-      console.log("bad request !");
+      console.log("bad request! : ", request.action);
     }
   }
 });
 
-var extractor = (obj) => {
-    return {
-        url : obj.url,
-        origin : obj.origin
-    }
-};
+var get_date = () => {
+  return new Date().toLocaleString()
+}
 
 var main = (url) => {
   const pattern = new RegExp("https");
@@ -63,6 +83,42 @@ var set_false = () => {
     },
   });
 };
+
+// var ref = db.ref();
+// ref.once("value", (snap) => {console.log(snap.val())})
+
+function signin() {
+  var provider = new firebase.auth.GoogleAuthProvider();
+  firebase.auth().signInWithPopup(provider).then(function (result) {
+    console.log(result.credential.accessToken);
+  }).catch(function (error) {
+    console.log(error.code);
+    // var errorMessage = error.message;
+    // var email = error.email;
+    // var credential = error.credential;
+  });
+}
+
+function signout() {
+    firebase.auth().signOut().then(function () { alert("signed out."); })
+      .catch(function (error) { console.log(error); });
+}
+
+function send() {
+  chrome.tabs.sendMessage(active_tab_id, { message: get_date() });
+  console.log('sent to front.')
+}
+
+
+// firebase.auth().currentUser ? signout() : signin();
+
+// firebase.auth().onAuthStateChanged(function(user) {
+//   if (user) {
+//     alert('signed in.')
+//   } else {
+//     alert('signed out.')
+//   }
+// });
 
 // chrome.tabs.onUpdated.addListener((callback) => {
 //   console.log(callback)
