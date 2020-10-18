@@ -4,6 +4,7 @@ and call to chrome runtime API
 API, lives in background.js
 */
 
+
 var main = () => {
   chrome.runtime.sendMessage({ action: "update" }, (res) => {
     switch (res.code) {
@@ -11,10 +12,11 @@ var main = () => {
       default: { console.log("this is an error .-. "); }
     }
   });
-  chrome.runtime.onMessage.addListener((request, sender, responseBack) => {
-    console.log(request);
-  });
 
+  chrome.runtime.onMessage.addListener((request, sender, responseBack) => {
+    if (request.code == 403) {alert ("u're logged out!")}
+  });
+  
 };
 
 var set_storage = () => {
