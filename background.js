@@ -1,11 +1,10 @@
-let active_tab_id = 0;
-let is_set = false;
-var d = new Date();
-var logged_in;
+/**
+ * background should not check 
+ * authentication process or user
+ **/
 
-firebase.auth().onAuthStateChanged((user) => {
-  user ? logged_in = true : set_default();
-})
+let active_tab_id = 0;
+let logged_in = Boolean;
 
 chrome.tabs.onActivated.addListener((tab) => {
   chrome.tabs.get(tab.tabId, (current_tab_info) => {
@@ -62,11 +61,14 @@ var get_date = () => {
 }
 
 var main = (url) => {
+  if (! firebase.auth().currentUser) {chrome.tabs.sendMessage(active_tab_id, {code : 403})};
   const pattern = new RegExp("https");
-  set_icon(pattern.test(url))
+  set_status(pattern.test(url))
 };
 
-var set_icon = (flag) => {
+
+
+var set_status = (flag) => {
   if (flag) {
     chrome.browserAction.setIcon({
       path: {
@@ -83,18 +85,6 @@ var set_icon = (flag) => {
     });
   }
 }
-
-var set_default = () => {
-  chrome.browserAction.setIcon({
-    path: {
-      19: "./icons/logo16.png",
-      38: "./icons/logo32.png"
-    },
-  });
-}
-
-// var ref = db.ref();
-// ref.once("value", (snap) => {console.log(snap.val())})
 
 function signin() {
   var provider = new firebase.auth.GoogleAuthProvider();
@@ -116,10 +106,15 @@ function signout() {
     });
 }
 
+
+
 /**
  * testing interval, but it is bad idea.
  * setInterval(() => { chrome.tabs.sendMessage(active_tab_id, { message: "handled from background." }); }, 3000);
  */
+
+// var ref = db.ref();
+// ref.once("value", (snap) => {console.log(snap.val())})
 
 // function send_test_message() {
 //   chrome.tabs.sendMessage(active_tab_id, { message: get_date() });

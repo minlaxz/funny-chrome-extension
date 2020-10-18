@@ -30,7 +30,8 @@ document.addEventListener('DOMContentLoaded', () => {
     login_btn.addEventListener('click', onclick_auth_in, false)
     logout_btn.addEventListener('click', onclick_auth_out, false)
 
-    var onclick_auth_in = () => {
+    function onclick_auth_in() {
+        console.log('in clicked.')
         chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => {
             chrome.runtime.sendMessage({ action: 'login', extra: tabs }, (res) => {
                 showData(res.code)
@@ -38,7 +39,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    var onclick_auth_out = () => {
+    function onclick_auth_out() {
+        console.log('out clicked.')
         var c = confirm('log out : Are you sure ?')
         if (c) {
             chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => {
