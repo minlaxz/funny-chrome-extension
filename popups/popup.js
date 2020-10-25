@@ -15,23 +15,17 @@ const login_btn = document.getElementById('auth-in');
 const logout_btn = document.getElementById('auth-out');
 const output = document.getElementById('info');
 
-firebase.auth().onAuthStateChanged((user) => {
-    if (user) {
-        logout_field.hidden = false;
-        output.innerText = 'as : ' + user.email;
-    } else {
-        login_field.hidden = false;
-        output.innerText = 'as : ' + user
-    }
-})
-
 document.addEventListener('DOMContentLoaded', () => {
+    chrome.storage.local.get("necro", (data) => {
+        output.innerText = 'as : ' + data.necro.email;
+
+        data.necro.is_authed ? logout_field.hidden = false : login_field.hidden = false;
+    });
 
     login_btn.addEventListener('click', onclick_auth_in, false)
     logout_btn.addEventListener('click', onclick_auth_out, false)
 
     function onclick_auth_in() {
-        console.log('in clicked.')
         chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => {
             chrome.runtime.sendMessage({ action: 'login', extra: tabs }, (res) => {
                 showData(res.code)
@@ -41,13 +35,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function onclick_auth_out() {
         console.log('out clicked.')
-        var c = confirm('log out : Are you sure ?')
+        let c = confirm('log out : Are you sure ?')
         if (c) {
             chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => {
                 chrome.runtime.sendMessage({ action: 'logout', extra: tabs }, (res) => {
                     showData(res.code)
                 })
             });
+            window.location.reload();
         } else { window.location.reload(); }
 
     }

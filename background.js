@@ -1,92 +1,92 @@
 /**
- * background should not check 
+ * background should Check \
  * authentication process or user
  **/
 
 let active_tab_id = 0;
-let logged_in = Boolean;
+let is_authed;
+/** tabs onActivated -> get urls */
+// chrome.tabs.onActivated.addListener((tab) => {
+//   chrome.tabs.get(tab.tabId, (current_tab_info) => {
+//     active_tab_id = tab.tabId;
+//     console.log("bg : ", current_tab_info.url);
 
-chrome.tabs.onActivated.addListener((tab) => {
-  chrome.tabs.get(tab.tabId, (current_tab_info) => {
-    active_tab_id = tab.tabId;
-    console.log("bg : ", current_tab_info.url);
+//     main(current_tab_info.url); // evaluation goes here
 
-    main(current_tab_info.url); // evaluation goes here
+//     // chrome.tabs.insertCSS(null, {file : "./mystyle.css"});
+//     // chrome.tabs.executeScript(null, { file: "./foreground.js" }, () => { }
+//   });
+// });
 
-    // chrome.tabs.insertCSS(null, {file : "./mystyle.css"});
-    // chrome.tabs.executeScript(null, { file: "./foreground.js" }, () => { }
-  });
-});
-
-chrome.runtime.onMessage.addListener((request, sender, responseBack) => {
-  switch (request.action) {
-    case "update": {
-      responseBack({ code: 201 });  // Respond back to the frontend.*/
-      console.log('responsed update signal.', sender)
-
-      main(sender.url)
-
-      break;
-    }
-    case "login": {
-      responseBack({ code: 200 })
-      console.log('responsed login signal.', request.extra) //works
-
-      firebase.auth().currentUser ? console.log('something bad!') : signin();
-      console.log('sender : ', sender) // not useful
-      break;
-    }
-    case "logout": {
-      responseBack({ code: 200 })
-      console.log('responsed logout signal.') //wroks
-      console.log('extra : ', request.extra)
-
-      firebase.auth().currentUser ? signout() : console.log('something bad!'); //already logged out
-      // console.log('sender : ', sender) // not useful
-      break;
-    }
-    case "test": {
-      responseBack({ code: 200 })
-      console.log('responsed TEST signal.')
-      break;
-    }
-    default: {
-      console.log("bad request! : ", request.action);
-    }
-  }
-});
 
 var get_date = () => {
   return new Date().toLocaleString()
 }
 
+/** main func 
 var main = (url) => {
-  if (! firebase.auth().currentUser) {chrome.tabs.sendMessage(active_tab_id, {code : 403})};
-  const pattern = new RegExp("https");
-  set_status(pattern.test(url))
+  // if (! firebase.auth().currentUser) {chrome.tabs.sendMessage(active_tab_id, {code : 403})};
+  var snap = datebase_handler()
+  console.log(snap)
+  // const pattern = new RegExp("https");
+  // const href = new RegExp(snap.url)
+  // set_status(href.test(url))
+};
+*/
+
+/** database handler
+function datebase_handler() {
+  const user = firebase.auth().currentUser
+  var ref = db.ref(user.uid+'/chrome_records/')
+  ref.once('value', (snap) => {
+    console.log (snap.val())
+  })
+} */
+
+const alreadyAuthed = (user) => {
+  chrome.browserAction.setIcon({
+    path: {
+      19: "./flags/right19.png",
+      38: "./flags/right38.png"
+    }
+  });
+  is_authed = true;
+  chrome.storage.local.set({ 
+    'necro' : { 
+      'is_authed': is_authed ,
+      'email' : user.email
+    }
+  }, () => { if (chrome.runtime.lastError) { console.error(
+        "Error setting " + key + " to " + JSON.stringify(data) +
+        ": " + chrome.runtime.lastError.message
+      );
+    }
+  })
+};
+
+const notAuthYet = () => {
+  chrome.browserAction.setIcon({
+    path: {
+      19: "./flags/wrong19.png",
+      38: "./flags/wrong38.png"
+    }
+  });
+  is_authed = false;
+  chrome.storage.local.set({ 
+    'necro' : { 
+      'is_authed': is_authed ,
+      'email' : null
+    }
+  }, () => { if (chrome.runtime.lastError) { console.error(
+        "Error setting " + key + " to " + JSON.stringify(data) +
+        ": " + chrome.runtime.lastError.message
+      );
+    }
+  })
 };
 
 
-
-var set_status = (flag) => {
-  if (flag) {
-    chrome.browserAction.setIcon({
-      path: {
-        19: "./flags/right19.png",
-        38: "./flags/right38.png"
-      }
-    });
-  } else {
-    chrome.browserAction.setIcon({
-      path: {
-        19: "./flags/wrong19.png",
-        38: "./flags/wrong38.png"
-      }
-    });
-  }
-}
-
-function signin() {
+const signIn = () => {
   var provider = new firebase.auth.GoogleAuthProvider();
   firebase.auth().signInWithPopup(provider)
     .then((result) => {
@@ -96,7 +96,7 @@ function signin() {
     });
 }
 
-function signout() {
+const signOut = () => {
   firebase.auth().signOut()
     .then(() => {
       console.log('bg : signed out.')
@@ -105,6 +105,52 @@ function signout() {
       console.log('bg: sign out error. ', error);
     });
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  firebase.auth().onAuthStateChanged((user) => {
+    user ? alreadyAuthed(user) : notAuthYet();
+  })
+  /** Runtime Listener -> connect with popup via API */
+  chrome.runtime.onMessage.addListener((request, sender, responseBack) => {
+    switch (request.action) {
+      case "post": {
+        responseBack({ code: 201 });  // Respond back to the frontend.*/
+        console.log('responsed post signal.', sender)
+        main(sender.url)
+        break;
+      }
+      case "delete": {
+        responseBack({ code: 201 });  // Respond back to the frontend.*/
+        console.log('responsed delete signal.', sender)
+        main(sender.url)
+        break;
+      }
+      case "login": {
+        responseBack({ code: 200 })
+        console.log('responsed login signal. extra : ', request.extra) //works
+        if (!is_authed) signIn();
+        // not useful sender
+        break;
+      }
+      case "logout": {
+        responseBack({ code: 200 })
+        console.log('responsed logout signal.') //wroks
+        console.log('extra : ', request.extra)
+        if (is_authed) signOut();
+        // console.log('sender : ', sender) // not useful
+        break;
+      }
+      case "test": {
+        responseBack({ code: 200 })
+        console.log('responsed TEST signal.')
+        break;
+      }
+      default: {
+        console.log("bad request! : ", request.action);
+      }
+    }
+  });
+})
 
 
 
