@@ -27,5 +27,5 @@
         "default_title" : "Necromancer"
     },
     "options_page": "options/options.html",
-    "content_security_policy":"script-src https://apis.google.com https://www.gstatic.com https://*.firebaseio.com 'self'; object-src 'self'"
+    "content_security_policy":"script-src https://apis.google.com https://www.gstatic.com https://*.firebaseio.com 'self' https://code.jquery.com https://cdn.jsdelivr.net; object-src 'self'"
 }
