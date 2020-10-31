@@ -1,6 +1,8 @@
 /**
  * background should Check \
  * authentication process or user
+ * update the local storage
+ * DO NOT SET SENSITIVE DATA
  **/
 
 let active_tab_id = 0;
