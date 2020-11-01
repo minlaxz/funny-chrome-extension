@@ -5,19 +5,22 @@ API, lives in background.js
 */
 
 
-// var main = () => {
-//   chrome.runtime.sendMessage({ action: "update" }, (res) => {
-//     switch (res.code) {
-//       case 201: { set_storage(); break; }
-//       default: { console.log("this is an error .-. "); }
-//     }
-//   });
+var main = () => {
+  chrome.runtime.sendMessage({ action: "post"  , url :  window.location.href }, (res) => {
+    switch (res.code) {
+      case 200: { 
+          console.log('nice')
+          break;
+        }
+      default: { console.log("this is an error .-. "); }
+    }
+  });
 
-//   // chrome.runtime.onMessage.addListener((request, sender, responseBack) => {
-//   //   if (request.code == 403) {alert ("u're logged out!")}
-//   // });
+  // chrome.runtime.onMessage.addListener((request, sender, responseBack) => {
+  //   if (request.code == 403) {alert ("u're logged out!")}
+  // });
   
-// };
+};
 
 // var set_storage = () => {
 //   chrome.storage.local.set({ "a": "b" });
@@ -36,4 +39,4 @@ API, lives in background.js
  */ // solved
 
 
-// main();
+main();
