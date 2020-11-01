@@ -16,9 +16,32 @@ const logout_btn = document.getElementById('auth-out');
 const output_info = document.getElementById('info');
 const track_btn = document.getElementById('track');
 const untrack_btn = document.getElementById('untrack');
+const domain_name = document.getElementById('domain-name');
+const tab_full_url = document.getElementById('tab-full-url');
+const domain_title = document.getElementById('domain-title');
+const domain_info = document.getElementById('domain-info');
 
 
 document.addEventListener('DOMContentLoaded', () => {
+
+    chrome.tabs.query({active : true, 'lastFocusedWindow' : true}, (tabs) => {
+        var patt =  new RegExp('https')
+        var url = new URL(tabs[0].url)
+        if (patt.test(url)) {
+            domain_name.className += 'text-success'
+            domain_name.innerText = url.hostname + ' (secured)'
+        } else {
+            domain_name.className += 'text-danger'
+            domain_name.innerText = url.hostname + ' (unsecured)'
+        }
+        
+        domain_title.innerText = tabs[0].title
+
+        tab_full_url.innerText = 'Url : ' + tabs[0].url
+        console.log(tabs[0])
+
+    })
+
 
     chrome.storage.local.get("necro_thrive", (data) => {
         data.necro_thrive.track ? track_btn.hidden = true : untrack_btn.hidden = true
