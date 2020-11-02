@@ -5,46 +5,11 @@
  * DO NOT SET SENSITIVE DATA
  **/
 
-let active_tab_id = 0;
+// let active_tab_id = 0;
 let is_authed;
-/** tabs onActivated -> get urls */
-// chrome.tabs.onActivated.addListener((tab) => {
-//   chrome.tabs.get(tab.tabId, (current_tab_info) => {
-//     active_tab_id = tab.tabId;
-//     console.log("bg : ", current_tab_info.url);
+let domain_to_be_track;
 
-//     main(current_tab_info.url); // evaluation goes here
-
-//     // chrome.tabs.insertCSS(null, {file : "./mystyle.css"});
-//     // chrome.tabs.executeScript(null, { file: "./foreground.js" }, () => { }
-//   });
-// });
-
-
-var get_date = () => {
-  return new Date().toLocaleString()
-}
-
-/** main func 
-var main = (url) => {
-  // if (! firebase.auth().currentUser) {chrome.tabs.sendMessage(active_tab_id, {code : 403})};
-  var snap = datebase_handler()
-  console.log(snap)
-  // const pattern = new RegExp("https");
-  // const href = new RegExp(snap.url)
-  // set_status(href.test(url))
-};
-*/
-
-/** database handler
-function datebase_handler() {
-  const user = firebase.auth().currentUser
-  var ref = db.ref(user.uid+'/chrome_records/')
-  ref.once('value', (snap) => {
-    console.log (snap.val())
-  })
-} */
-
+/**AUTH */
 const alreadyAuthed = (user) => {
   chrome.browserAction.setIcon({
     path: {
@@ -52,17 +17,15 @@ const alreadyAuthed = (user) => {
       38: "./flags/right38.png"
     }
   });
+
   is_authed = true;
-  chrome.storage.local.set({ 
-    'necro' : { 
-      'is_authed': is_authed ,
-      'email' : user.email
+  chrome.storage.local.set({
+    'necro': {
+      'is_authed': is_authed,
+      'email': user.email
     }
-  }, () => { if (chrome.runtime.lastError) { console.error(
-        "Error setting " + key + " to " + JSON.stringify(data) +
-        ": " + chrome.runtime.lastError.message
-      );
-    }
+  }, () => {
+    if (chrome.runtime.lastError) { chromeRuntimeError(chrome.runtime.lastError) }
   })
 };
 
@@ -73,29 +36,33 @@ const notAuthYet = () => {
       38: "./flags/wrong38.png"
     }
   });
+
   is_authed = false;
-  chrome.storage.local.set({ 
-    'necro' : { 
-      'is_authed': is_authed ,
-      'email' : null
+  chrome.storage.local.set({
+    'necro': {
+      'is_authed': is_authed,
+      'email': null
     }
-  }, () => { if (chrome.runtime.lastError) { console.error(
-        "Error setting " + key + " to " + JSON.stringify(data) +
-        ": " + chrome.runtime.lastError.message
-      );
-    }
+  }, () => {
+    if (chrome.runtime.lastError) { chromeRuntimeError(chrome.runtime.lastError) }
   })
 };
+
+const chromeRuntimeError = (error) => {
+  console.error(
+    "Error setting " + key + " to " + JSON.stringify(data) +
+    ": " + error.message
+  );
+}
 
 
 const signIn = () => {
   var provider = new firebase.auth.GoogleAuthProvider();
-  firebase.auth().signInWithPopup(provider)
-    .then((result) => {
-      console.log(result.credential.accessToken);
-    }).catch((error) => {
-      console.log(error);
-    });
+  firebase.auth().signInWithPopup(provider).then((result) => {
+    console.log(result.credential.accessToken);
+  }).catch((error) => {
+    console.log(error);
+  });
 }
 
 const signOut = () => {
@@ -108,23 +75,99 @@ const signOut = () => {
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  firebase.auth().onAuthStateChanged((user) => {
-    user ? alreadyAuthed(user) : notAuthYet();
+const get_date = () => {
+  return new Date().toLocaleString()
+}
+
+const url_to_origin = (url) => {
+  var url = new URL(url)
+  return url.hostname
+}
+
+const isNotValid = (url) => {
+  var patt = new RegExp('chrome:')
+  return patt.test(url)
+  /** true if invalid */
+}
+
+const cleanInfo = (obj, flag) => {
+  if (domain_to_be_track !== null) {
+    if (obj.url == "" || isNotValid(obj.url)) {
+      console.log('Not Valid Origin')
+    } else {
+      var origin = url_to_origin(obj.url)
+      if (flag == 'bg') { /** bg */
+        local_handler(origin, obj.title)
+      } else { /** fg */
+        local_handler(origin, obj.tab.title)
+      }
+    }
+  } else {
+    console.log('No domain is currently tracking.')
+  }
+}
+
+const onTrackDomain = () => {
+  chrome.storage.local.get('necro_thrive', (data) => {
+    if (data.necro_thrive.track) {
+      domain_to_be_track = data.necro_thrive.domain
+    } else {
+      domain_to_be_track = null
+    }
+
   })
+
+  chrome.storage.onChanged.addListener((data) => {
+    if (data.necro_thrive.newValue.track) {
+      domain_to_be_track = data.necro_thrive.newValue.domain
+      console.log(data.necro_thrive.newValue.domain)
+    } else {
+      domain_to_be_track = null
+      console.log(data.necro_thrive.newValue.domain)
+    }
+  })
+}
+
+const local_handler = (origin, title) => {
+  console.log(title)
+  console.log(origin)
+  domain_to_be_track == origin ? console.log('tracking this domain') : console.log('not tracking.')
+}
+
+
+
+document.addEventListener('DOMContentLoaded', () => {
+
+  /**AUTH FIELD */
+  firebase.auth().onAuthStateChanged((user) => {
+    if (user) {
+      is_authed = true; alreadyAuthed(user);
+    } else { is_authed = false; notAuthYet(); }
+  })
+
+  /** tabs onActivated -> get urls background -> changing tabs */
+  chrome.tabs.onActivated.addListener((tab) => {
+    // active_tab_id = tab.tabId;
+    chrome.tabs.get(tab.tabId, (current_tab_info) => {
+      cleanInfo(current_tab_info, 'bg')
+      // console.log("bg : ", current_tab_info);
+      // main(current_tab_info.url); // evaluation goes here
+      // chrome.tabs.insertCSS(null, {file : "./mystyle.css"});
+      // chrome.tabs.executeScript(null, { file: "./foreground.js" }, () => { }
+    });
+  });
+
+
   /** Runtime Listener -> connect with popup via API */
   chrome.runtime.onMessage.addListener((request, sender, responseBack) => {
     switch (request.action) {
       case "post": {
-        responseBack({ code: 201 });  // Respond back to the frontend.*/
-        console.log('responsed post signal.', sender)
-        main(sender.url)
+        responseBack({ code: 200 });  /** Respond back to the frontend.*/
+        cleanInfo(sender, 'fg') /** get info from foreground -> on new tabs, click links */
         break;
       }
       case "delete": {
-        responseBack({ code: 201 });  // Respond back to the frontend.*/
-        console.log('responsed delete signal.', sender)
-        main(sender.url)
+        responseBack({ code: 201 }); console.log('responsed delete signal.', sender);
         break;
       }
       case "login": {
@@ -143,8 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
         break;
       }
       case "test": {
-        responseBack({ code: 200 })
-        console.log('responsed TEST signal.')
+        responseBack({ code: 200 }); console.log('responsed TEST signal.');
         break;
       }
       default: {
@@ -152,9 +194,31 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   });
+  onTrackDomain();
+
 })
 
 
+
+/** Firebase
+var main = (url) => {
+  // if (! firebase.auth().currentUser) {chrome.tabs.sendMessage(active_tab_id, {code : 403})};
+  var snap = datebase_handler()
+  console.log(snap)
+  // const pattern = new RegExp("https");
+  // const href = new RegExp(snap.url)
+  // set_status(href.test(url))
+};
+*/
+
+/** Firebase database handler
+function datebase_handler() {
+  const user = firebase.auth().currentUser
+  var ref = db.ref(user.uid+'/chrome_records/')
+  ref.once('value', (snap) => {
+    console.log (snap.val())
+  })
+} */
 
 /**
  * testing interval, but it is bad idea.

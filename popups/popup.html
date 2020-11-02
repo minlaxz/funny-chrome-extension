@@ -12,17 +12,97 @@
     <script src="https://www.gstatic.com/firebasejs/7.23.0/firebase-database.js"></script>
 
     <script src="../extra/auth.js"></script> -->
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200&display=swap" rel="stylesheet">
+    <style>
+        .text-sm {
+            font-size: 0.8em;
+        }
+
+        .pp-font {
+            font-family: 'Poppins';
+        }
+    </style>
+
 </head>
 
 <body>
 
-    <div id="root" class="text-center" style="width: 18rem; margin-top: 1%; margin-bottom: 3%;">
-        <span>Track this domain.</span>
-        <button class="btn btn-primary btn-sm" id="track">Track!</button>
-        <button class="btn btn-primary btn-sm" id="untrack">Untrack!</button>
-    </div>
-    <div id="thrive"></div>
+    <div id="root" style="width: 18rem; margin-top: 3%; margin-bottom: 3%;">
 
+        <div id="domain-info">
+            <div class="text-sm d-flex justify-content-center">
+                <p> Domain : </p>
+                <p id="domain-name" class="pp-font text-center "></p>
+            </div>
+            <div class="text-sm d-flex justify-content-center">
+                <p id="domain-title" class="pp-font text-center text-justify"></p>
+            </div>
+            <div class="text-sm d-flex justify-content-center">
+                <p id="tracking-info" class="pp-font text-center text-justify"></p>
+            </div>
+        </div>
+
+
+        <!-- Parent Buttons -->
+        <p style="margin-left: 3%;">
+            <button class="btn btn-secondary btn-sm" data-toggle="collapse" data-target="#multiCollapseExample1"
+                role="button" aria-expanded="false" aria-controls="multiCollapseExample1 multiCollapseExample2">Tracking
+            </button>
+
+            <button class="btn btn-secondary btn-sm" type="button" data-toggle="collapse"
+                data-target="#multiCollapseExample2" aria-expanded="false"
+                aria-controls="multiCollapseExample2">Information</button>
+        </p>
+
+        <!-- First Parent's Childs -->
+        <div class="collapse multi-collapse" id="multiCollapseExample1">
+            <div class="card">
+                <div class="card-header text-sm">
+                    Tracking Settings
+                </div>
+                <div class="card-body">
+                    <div id="specific-domain">
+                        <button id="s-track" class="btn btn-dark btn-sm">
+                            Track Domain!
+                        </button><span id="s-track-name"></span>
+                        <button id="s-untrack" class="btn btn-dark btn-sm">
+                            Untrack Domain!
+                        </button>
+                    </div>
+                    <div id="alldomain">
+                        <button id="a-track" class="btn btn-dark btn-sm">
+                            Track All!
+                        </button>
+                        <button id="a-untrack" class="btn btn-dark btn-sm">
+                            Release All!
+                        </button>
+                    </div>
+
+
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Second Parent's Childs -->
+        <div class="collapse multi-collapse" id="multiCollapseExample2">
+            <div class="card">
+                <div class="card-header text-sm">
+                    Current Domain Information
+                </div>
+                <div class="card-body text-sm">
+
+                    <p id="tab-full-url" class="text-dark"></p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+
+    <!-- Auth Settings -->
     <div class="sticky-bottom">
         <div class="collapse" id="navbarToggleExternalContent">
             <div class="bg-light p-4">
@@ -77,13 +157,13 @@
 
 
         <nav class="navbar navbar-dark bg-dark navbar-expand-sm">
-            <span style="text-align: center; color: antiquewhite;">Settings</span>
+            <span style="text-align: center; color: antiquewhite;">Auth Settings</span>
             <button class="navbar-toggler bg-dark" type="button" data-toggle="collapse"
                 data-target="#navbarToggleExternalContent" aria-controls="navbarToggleExternalContent"
                 aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon" style="font-size: 0.5em;"></span>
             </button>
-            
+
         </nav>
     </div>
 
