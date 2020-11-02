@@ -6,47 +6,7 @@
  **/
 
 // let active_tab_id = 0;
-let is_authed;
 let domain_to_be_track;
-
-/**AUTH */
-const alreadyAuthed = (user) => {
-  chrome.browserAction.setIcon({
-    path: {
-      19: "./flags/right19.png",
-      38: "./flags/right38.png"
-    }
-  });
-
-  is_authed = true;
-  chrome.storage.local.set({
-    'necro': {
-      'is_authed': is_authed,
-      'email': user.email
-    }
-  }, () => {
-    if (chrome.runtime.lastError) { chromeRuntimeError(chrome.runtime.lastError) }
-  })
-};
-
-const notAuthYet = () => {
-  chrome.browserAction.setIcon({
-    path: {
-      19: "./flags/wrong19.png",
-      38: "./flags/wrong38.png"
-    }
-  });
-
-  is_authed = false;
-  chrome.storage.local.set({
-    'necro': {
-      'is_authed': is_authed,
-      'email': null
-    }
-  }, () => {
-    if (chrome.runtime.lastError) { chromeRuntimeError(chrome.runtime.lastError) }
-  })
-};
 
 const chromeRuntimeError = (error) => {
   console.error(
@@ -54,7 +14,6 @@ const chromeRuntimeError = (error) => {
     ": " + error.message
   );
 }
-
 
 const signIn = () => {
   var provider = new firebase.auth.GoogleAuthProvider();
@@ -90,6 +49,51 @@ const isNotValid = (url) => {
   /** true if invalid */
 }
 
+const setIcon = (flag) => {
+  switch (flag) {
+    case 'signin': {
+      chrome.browserAction.setIcon({
+        path: {
+          32: "./flags/signin-32.png",
+          48: "./flags/signin-48.png",
+          128: "./flags/signin-128.png"
+        }
+      });
+      break;
+    }
+    case 'notsignin': {
+      chrome.browserAction.setIcon({
+        path: {
+          32: "./flags/signout-32.png",
+          48: "./flags/signout-48.png",
+          128: "./flags/signout-128.png"
+        }
+      });
+      break;
+    }
+    case 'tracked': {
+      chrome.browserAction.setIcon({
+        path: {
+          32: "./flags/tracked-32.png",
+          48: "./flags/tracked-48.png",
+          128: "./flags/tracked-128.png"
+        }
+      });
+      break;
+    }
+    default: {
+      console.log('error called.')
+      chrome.browserAction.setIcon({
+        path: {
+          32: "./flags/signout-32.png",
+          48: "./flags/signout-48.png",
+          128: "./flags/signout-128.png"
+        }
+      });
+    }
+  }
+}
+
 const cleanInfo = (obj, flag) => {
   if (domain_to_be_track !== null) {
     if (obj.url == "" || isNotValid(obj.url)) {
@@ -105,6 +109,7 @@ const cleanInfo = (obj, flag) => {
   } else {
     console.log('No domain is currently tracking.')
   }
+  setIcon('signin');
 }
 
 const onTrackDomain = () => {
@@ -131,19 +136,40 @@ const onTrackDomain = () => {
 const local_handler = (origin, title) => {
   console.log(title)
   console.log(origin)
-  domain_to_be_track == origin ? console.log('tracking this domain') : console.log('not tracking.')
+  if (domain_to_be_track == origin) {
+    console.log('tracking this domain')
+    setIcon('tracked')
+  } else {
+    console.log('not tracking.')
+  }
+
 }
 
-
+const setAuthState = (user) => {
+  let is_authed;
+  let user_email;
+  user ? user_email = user.email : null
+  if (user) {
+    is_authed = true
+    setIcon('signin')
+  } else {
+    is_authed = false
+    setIcon('signout')
+  }
+  chrome.storage.local.set({
+    'necro': {
+      'is_authed': is_authed,
+      'email': user_email
+    }
+  }, () => {
+    if (chrome.runtime.lastError) { chromeRuntimeError(chrome.runtime.lastError) }
+  })
+}
 
 document.addEventListener('DOMContentLoaded', () => {
 
   /**AUTH FIELD */
-  firebase.auth().onAuthStateChanged((user) => {
-    if (user) {
-      is_authed = true; alreadyAuthed(user);
-    } else { is_authed = false; notAuthYet(); }
-  })
+  firebase.auth().onAuthStateChanged((user) => { user ? setAuthState(user) : setAuthState() })
 
   /** tabs onActivated -> get urls background -> changing tabs */
   chrome.tabs.onActivated.addListener((tab) => {
@@ -172,16 +198,16 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       case "login": {
         responseBack({ code: 200 })
-        console.log('responsed login signal. extra : ', request.extra) //works
-        if (!is_authed) signIn();
+        console.log('responsed login signal. extra : ', request.extra)
+        if (!firebase.auth().currentUser) signIn();
         // not useful sender
         break;
       }
       case "logout": {
         responseBack({ code: 200 })
-        console.log('responsed logout signal.') //wroks
+        console.log('responsed logout signal.')
         console.log('extra : ', request.extra)
-        if (is_authed) signOut();
+        if (firebase.auth().currentUser) signOut();
         // console.log('sender : ', sender) // not useful
         break;
       }
