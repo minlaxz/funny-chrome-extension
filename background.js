@@ -61,8 +61,26 @@ document.addEventListener('DOMContentLoaded', () => {
       isTrack = data.necro_thrive.newValue.track
       originToBeTrack = data.necro_thrive.newValue.domain
       updateState()
+      if (isTrack) {
+        setOnFirebase(href = originToBeTrack, flag = 'origin')
+      }
     }
   });
+
+  const setOnFirebase = (href , flag) => {
+    let user  = firebase.auth().currentUser
+    let ref = db.ref(user.uid+'/chrome_records/'+get_date()+'/'+get_time()+'/')
+    if (flag == 'origin') {
+      ref.set({
+        origin : href , 
+      })
+    } else {
+      ref.set({
+        url : href , 
+      })
+    }
+
+  }
 
   const chromeRuntimeError = (error) => {
     console.error(error.message);
@@ -88,7 +106,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const get_date = () => {
-    return new Date().toLocaleString()
+    var tdy = new Date()
+    return tdy.getFullYear()+'_'+tdy.getMonth()+'_'+tdy.getDate()
+  }
+
+  const get_time = () => {
+    var tdy = new Date()
+    return tdy.getHours()+'_'+tdy.getMinutes()+'_'+tdy.getSeconds()
   }
 
   const url2Origin = (url) => {
@@ -102,10 +126,16 @@ document.addEventListener('DOMContentLoaded', () => {
     /** true if invalid */
   }
 
+  const isGoogleSearch = (url) => {
+    var patt = new RegExp('https://www.google.com/search?')
+    return patt.test(url)
+  }
+
   const lastLocalHandler = (title) => {
     console.log('lastLocalHandler Title : ' + title)
     console.log('lastLocalHandler Origin : ' + currentOrigin)
     if (originToBeTrack == currentOrigin) {
+      // taking action for tracked domain
       isTrack = true
       console.log('tracking this domain')
     } else {
@@ -181,6 +211,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     updateState()
+    // if (obj.url != "" && !isNotValid(obj.url) && !isGoogleSearch(obj.url)) {
+    //   setOnFirebase(href = obj.url , flag = 'url')
+    // }
   }
 
   /** tabs onActivated -> get urls background -> changing tabs */
