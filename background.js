@@ -5,8 +5,7 @@
  * DO NOT SET SENSITIVE DATA
  **/
 
-// let active_tab_id = 0;
-let domain_to_be_track;
+let domainToBeTrack;
 
 const chromeRuntimeError = (error) => {
   console.error(
@@ -38,7 +37,7 @@ const get_date = () => {
   return new Date().toLocaleString()
 }
 
-const url_to_origin = (url) => {
+const url2Origin = (url) => {
   var url = new URL(url)
   return url.hostname
 }
@@ -51,7 +50,7 @@ const isNotValid = (url) => {
 
 const setIcon = (flag) => {
   switch (flag) {
-    case 'signin': {
+    case 'nottracking': {
       chrome.browserAction.setIcon({
         path: {
           32: "./flags/signin-32.png",
@@ -61,17 +60,7 @@ const setIcon = (flag) => {
       });
       break;
     }
-    case 'notsignin': {
-      chrome.browserAction.setIcon({
-        path: {
-          32: "./flags/signout-32.png",
-          48: "./flags/signout-48.png",
-          128: "./flags/signout-128.png"
-        }
-      });
-      break;
-    }
-    case 'tracked': {
+    case 'tracking': {
       chrome.browserAction.setIcon({
         path: {
           32: "./flags/tracked-32.png",
@@ -82,7 +71,6 @@ const setIcon = (flag) => {
       break;
     }
     default: {
-      console.log('error called.')
       chrome.browserAction.setIcon({
         path: {
           32: "./flags/signout-32.png",
@@ -92,90 +80,117 @@ const setIcon = (flag) => {
       });
     }
   }
+  console.log('setIcon get called with flag : ' + flag)
 }
 
-const cleanInfo = (obj, flag) => {
-  if (domain_to_be_track !== null) {
+const lastGateway = (obj, flag) => {
+  if (domainToBeTrack !== null) {
     if (obj.url == "" || isNotValid(obj.url)) {
       console.log('Not Valid Origin')
+      setIcon('nottracking')
     } else {
-      var origin = url_to_origin(obj.url)
+      var origin = url2Origin(obj.url)
       if (flag == 'bg') { /** bg */
-        local_handler(origin, obj.title)
+        lastLocalHandler(origin, obj.title)
       } else { /** fg */
-        local_handler(origin, obj.tab.title)
+        lastLocalHandler(origin, obj.tab.title)
       }
     }
   } else {
     console.log('No domain is currently tracking.')
+    setIcon('nottracking')
   }
-  setIcon('signin');
 }
 
-const onTrackDomain = () => {
-  chrome.storage.local.get('necro_thrive', (data) => {
-    if (data.necro_thrive.track) {
-      domain_to_be_track = data.necro_thrive.domain
-    } else {
-      domain_to_be_track = null
-    }
-
-  })
-
-  chrome.storage.onChanged.addListener((data) => {
-    if (data.necro_thrive.newValue.track) {
-      domain_to_be_track = data.necro_thrive.newValue.domain
-      console.log(data.necro_thrive.newValue.domain)
-    } else {
-      domain_to_be_track = null
-      console.log(data.necro_thrive.newValue.domain)
-    }
-  })
-}
-
-const local_handler = (origin, title) => {
-  console.log(title)
-  console.log(origin)
-  if (domain_to_be_track == origin) {
+const lastLocalHandler = (origin, title) => {
+  console.log('lastLocalHandler Title : ' + title)
+  console.log('lastLocalHandler Origin : ' + origin)
+  if (domainToBeTrack == origin) {
     console.log('tracking this domain')
-    setIcon('tracked')
+    setIcon('tracking')
   } else {
     console.log('not tracking.')
+    setIcon('nottracking')
   }
 
 }
 
-const setAuthState = (user) => {
-  let is_authed;
-  let user_email;
-  user ? user_email = user.email : null
-  if (user) {
-    is_authed = true
-    setIcon('signin')
-  } else {
-    is_authed = false
-    setIcon('signout')
-  }
+const getAuthStorage = () => {
+  // Auth
+  chrome.storage.local.get('necro', (data) => {
+    var n = data.necro;
+    if (n) {
+      // user exist
+      setIcon('nottracking')
+    } else {
+      // user does not exist
+      setIcon('')
+    }
+  });
+}
+
+const getDomainStorage = () => {
+  // Doamin
+  chrome.storage.local.get('necro_thrive', (data) => {
+    var n = data.necro_thrive;
+    if (n.track) {
+      // tracking a domain
+      domainToBeTrack = n.domain
+    } else {
+      domainToBeTrack = null
+    }
+    // TODO some bugs
+  });
+}
+
+const onChangedData = () => {
+  getAuthStorage();
+  getDomainStorage();
+
+  chrome.storage.onChanged.addListener((data) => {
+    if (data.necro_thrive) {
+      var n = data.necro_thrive;
+      if (n.newValue.track) {
+        domainToBeTrack = n.newValue.domain
+        setIcon('tracking')
+      } else {
+        domainToBeTrack = null
+        setIcon('nottracking')
+      }
+    }
+  });
+
+  chrome.storage.onChanged.addListener((data) => {
+    if (data.necro) {
+      var n = data.necro;
+      n.newValue.is_authed ? setIcon('nottracking') : setIcon('')
+    }
+  });
+}
+
+const setStorage = (user, auth) => {
+  let email;
+  user ? email = user.email : null
   chrome.storage.local.set({
     'necro': {
-      'is_authed': is_authed,
-      'email': user_email
+      'is_authed': auth,
+      'email': email
     }
   }, () => {
     if (chrome.runtime.lastError) { chromeRuntimeError(chrome.runtime.lastError) }
-  })
+  });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
 
   /**AUTH FIELD */
-  firebase.auth().onAuthStateChanged((user) => { user ? setAuthState(user) : setAuthState() })
+  firebase.auth().onAuthStateChanged((user) => { user ? setStorage(user, true) : setStorage(null, false) });
 
   /** tabs onActivated -> get urls background -> changing tabs */
   chrome.tabs.onActivated.addListener((tab) => {
     // active_tab_id = tab.tabId;
     chrome.tabs.get(tab.tabId, (current_tab_info) => {
-      cleanInfo(current_tab_info, 'bg')
+      lastGateway(current_tab_info, 'bg')
       // console.log("bg : ", current_tab_info);
       // main(current_tab_info.url); // evaluation goes here
       // chrome.tabs.insertCSS(null, {file : "./mystyle.css"});
@@ -189,11 +204,12 @@ document.addEventListener('DOMContentLoaded', () => {
     switch (request.action) {
       case "post": {
         responseBack({ code: 200 });  /** Respond back to the frontend.*/
-        cleanInfo(sender, 'fg') /** get info from foreground -> on new tabs, click links */
+        lastGateway(sender, 'fg') /** get info from foreground -> on new tabs, click links */
         break;
       }
       case "delete": {
-        responseBack({ code: 201 }); console.log('responsed delete signal.', sender);
+        responseBack({ code: 200 });
+        console.log('responsed delete signal.', sender);
         break;
       }
       case "login": {
@@ -220,7 +236,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   });
-  onTrackDomain();
+
+  onChangedData();
 
 })
 
