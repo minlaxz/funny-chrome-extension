@@ -5,192 +5,189 @@
  * DO NOT SET SENSITIVE DATA
  **/
 
-let domainToBeTrack;
-
-const chromeRuntimeError = (error) => {
-  console.error(
-    "Error setting " + key + " to " + JSON.stringify(data) +
-    ": " + error.message
-  );
-}
-
-const signIn = () => {
-  var provider = new firebase.auth.GoogleAuthProvider();
-  firebase.auth().signInWithPopup(provider).then((result) => {
-    console.log(result.credential.accessToken);
-  }).catch((error) => {
-    console.log(error);
-  });
-}
-
-const signOut = () => {
-  firebase.auth().signOut()
-    .then(() => {
-      console.log('bg : signed out.')
-    })
-    .catch((error) => {
-      console.log('bg: sign out error. ', error);
-    });
-}
-
-const get_date = () => {
-  return new Date().toLocaleString()
-}
-
-const url2Origin = (url) => {
-  var url = new URL(url)
-  return url.hostname
-}
-
-const isNotValid = (url) => {
-  var patt = new RegExp('chrome:')
-  return patt.test(url)
-  /** true if invalid */
-}
-
-const setIcon = (flag) => {
-  switch (flag) {
-    case 'nottracking': {
-      chrome.browserAction.setIcon({
-        path: {
-          32: "./flags/signin-32.png",
-          48: "./flags/signin-48.png",
-          128: "./flags/signin-128.png"
-        }
-      });
-      break;
-    }
-    case 'tracking': {
-      chrome.browserAction.setIcon({
-        path: {
-          32: "./flags/tracked-32.png",
-          48: "./flags/tracked-48.png",
-          128: "./flags/tracked-128.png"
-        }
-      });
-      break;
-    }
-    default: {
-      chrome.browserAction.setIcon({
-        path: {
-          32: "./flags/signout-32.png",
-          48: "./flags/signout-48.png",
-          128: "./flags/signout-128.png"
-        }
-      });
-    }
-  }
-  console.log('setIcon get called with flag : ' + flag)
-}
-
-const lastGateway = (obj, flag) => {
-  if (domainToBeTrack !== null) {
-    if (obj.url == "" || isNotValid(obj.url)) {
-      console.log('Not Valid Origin')
-      setIcon('nottracking')
-    } else {
-      var origin = url2Origin(obj.url)
-      if (flag == 'bg') { /** bg */
-        lastLocalHandler(origin, obj.title)
-      } else { /** fg */
-        lastLocalHandler(origin, obj.tab.title)
-      }
-    }
-  } else {
-    console.log('No domain is currently tracking.')
-    setIcon('nottracking')
-  }
-}
-
-const lastLocalHandler = (origin, title) => {
-  console.log('lastLocalHandler Title : ' + title)
-  console.log('lastLocalHandler Origin : ' + origin)
-  if (domainToBeTrack == origin) {
-    console.log('tracking this domain')
-    setIcon('tracking')
-  } else {
-    console.log('not tracking.')
-    setIcon('nottracking')
-  }
-
-}
-
-const getAuthStorage = () => {
-  // Auth
-  chrome.storage.local.get('necro', (data) => {
-    var n = data.necro;
-    if (n) {
-      // user exist
-      setIcon('nottracking')
-    } else {
-      // user does not exist
-      setIcon('')
-    }
-  });
-}
-
-const getDomainStorage = () => {
-  // Doamin
-  chrome.storage.local.get('necro_thrive', (data) => {
-    var n = data.necro_thrive;
-    if (n.track) {
-      // tracking a domain
-      domainToBeTrack = n.domain
-    } else {
-      domainToBeTrack = null
-    }
-    // TODO some bugs
-  });
-}
-
-const onChangedData = () => {
-  getAuthStorage();
-  getDomainStorage();
-
-  chrome.storage.onChanged.addListener((data) => {
-    if (data.necro_thrive) {
-      var n = data.necro_thrive;
-      if (n.newValue.track) {
-        domainToBeTrack = n.newValue.domain
-        setIcon('tracking')
-      } else {
-        domainToBeTrack = null
-        setIcon('nottracking')
-      }
-    }
-  });
-
-  chrome.storage.onChanged.addListener((data) => {
-    if (data.necro) {
-      var n = data.necro;
-      n.newValue.is_authed ? setIcon('nottracking') : setIcon('')
-    }
-  });
-}
-
-const setStorage = (user, auth) => {
-  let email;
-  user ? email = user.email : null
-  chrome.storage.local.set({
-    'necro': {
-      'is_authed': auth,
-      'email': email
-    }
-  }, () => {
-    if (chrome.runtime.lastError) { chromeRuntimeError(chrome.runtime.lastError) }
-  });
-}
+let originToBeTrack;
+let currentOrigin;
+let isUser = false;
+let isTrack = false;
 
 document.addEventListener('DOMContentLoaded', () => {
 
   /**AUTH FIELD */
-  firebase.auth().onAuthStateChanged((user) => { user ? setStorage(user, true) : setStorage(null, false) });
+  firebase.auth().onAuthStateChanged((user) => {
+    if (user) {
+      chrome.storage.local.set({
+        'necro': {
+          'is_authed': true,
+          'email': user.email
+        }
+      }, () => {
+        if (chrome.runtime.lastError) { chromeRuntimeError(chrome.runtime.lastError) }
+      });
+
+    } else {
+      chrome.storage.local.set({
+        'necro': {
+          'is_authed': false,
+          'email': null
+        }
+      }, () => {
+        if (chrome.runtime.lastError) { chromeRuntimeError(chrome.runtime.lastError) }
+      });
+    }
+  });
+
+  chrome.storage.local.get('necro', (data) => {
+    if (data.necro) {
+      isUser = data.necro.is_authed
+      updateState()
+    }
+  });
+  chrome.storage.onChanged.addListener((data) => {
+    if (data.necro) {
+      isUser = data.necro.newValue.is_authed
+      updateState()
+    }
+  });
+
+  chrome.storage.local.get('necro_thrive', (data) => {
+    if (data.necro_thrive) {
+      isTrack = data.necro_thrive.track
+      originToBeTrack = data.necro_thrive.domain
+      updateState()
+    }
+  });
+  chrome.storage.onChanged.addListener((data) => {
+    if (data.necro_thrive) {
+      isTrack = data.necro_thrive.newValue.track
+      originToBeTrack = data.necro_thrive.newValue.domain
+      updateState()
+    }
+  });
+
+  const chromeRuntimeError = (error) => {
+    console.error(error.message);
+  }
+
+  const signIn = () => {
+    var provider = new firebase.auth.GoogleAuthProvider();
+    firebase.auth().signInWithPopup(provider).then((result) => {
+      console.log(result.credential.accessToken);
+    }).catch((error) => {
+      console.log(error);
+    });
+  }
+
+  const signOut = () => {
+    firebase.auth().signOut()
+      .then(() => {
+        console.log('bg : signed out.')
+      })
+      .catch((error) => {
+        console.log('bg: sign out error. ', error);
+      });
+  }
+
+  const get_date = () => {
+    return new Date().toLocaleString()
+  }
+
+  const url2Origin = (url) => {
+    var url = new URL(url)
+    return url.hostname
+  }
+
+  const isNotValid = (url) => {
+    var patt = new RegExp('chrome:')
+    return patt.test(url)
+    /** true if invalid */
+  }
+
+  const lastLocalHandler = (title) => {
+    console.log('lastLocalHandler Title : ' + title)
+    console.log('lastLocalHandler Origin : ' + currentOrigin)
+    if (originToBeTrack == currentOrigin) {
+      isTrack = true
+      console.log('tracking this domain')
+    } else {
+      isTrack = false
+      console.log('not tracking.')
+    }
+
+  }
+
+  const updateState = () => {
+    if (isUser) {
+      if (isTrack) {
+        updateIcon('tracking')
+      } else {
+        updateIcon('signin')
+      }
+    } else {
+      updateIcon('')
+    }
+  }
+
+  const updateIcon = (flag) => {
+    switch (flag) {
+      case 'signin': {
+        chrome.browserAction.setIcon({
+          path: {
+            32: "./flags/signin-32.png",
+            48: "./flags/signin-48.png",
+            128: "./flags/signin-128.png"
+          }
+        });
+        break;
+      }
+      case 'tracking': {
+        chrome.browserAction.setIcon({
+          path: {
+            32: "./flags/tracked-32.png",
+            48: "./flags/tracked-48.png",
+            128: "./flags/tracked-128.png"
+          }
+        });
+        break;
+      }
+      default: {
+        chrome.browserAction.setIcon({
+          path: {
+            32: "./flags/signout-32.png",
+            48: "./flags/signout-48.png",
+            128: "./flags/signout-128.png"
+          }
+        });
+      }
+    }
+  }
+
+  const tagChanging = (obj, flag) => {
+    if (isUser) {
+      if (originToBeTrack !== null) {
+        if (obj.url == "" || isNotValid(obj.url)) {
+          isTrack = false
+          console.log('Not Valid Origin')
+        } else {
+          currentOrigin = url2Origin(obj.url)
+          if (flag == 'bg') { /** bg */
+            lastLocalHandler(obj.title)
+          } else { /** fg */
+            lastLocalHandler(obj.tab.title)
+          }
+        }
+      } else {
+        isTrack = false
+        console.log('No domain is currently tracking.')
+      }
+    }
+    updateState()
+  }
 
   /** tabs onActivated -> get urls background -> changing tabs */
   chrome.tabs.onActivated.addListener((tab) => {
     // active_tab_id = tab.tabId;
     chrome.tabs.get(tab.tabId, (current_tab_info) => {
-      lastGateway(current_tab_info, 'bg')
+      tagChanging(current_tab_info, 'bg')
       // console.log("bg : ", current_tab_info);
       // main(current_tab_info.url); // evaluation goes here
       // chrome.tabs.insertCSS(null, {file : "./mystyle.css"});
@@ -204,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
     switch (request.action) {
       case "post": {
         responseBack({ code: 200 });  /** Respond back to the frontend.*/
-        lastGateway(sender, 'fg') /** get info from foreground -> on new tabs, click links */
+        tagChanging(sender, 'fg') /** get info from foreground -> on new tabs, click links */
         break;
       }
       case "delete": {
@@ -215,7 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
       case "login": {
         responseBack({ code: 200 })
         console.log('responsed login signal. extra : ', request.extra)
-        if (!firebase.auth().currentUser) signIn();
+        if (!isUser) signIn();
         // not useful sender
         break;
       }
@@ -223,7 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
         responseBack({ code: 200 })
         console.log('responsed logout signal.')
         console.log('extra : ', request.extra)
-        if (firebase.auth().currentUser) signOut();
+        if (isUser) signOut();
         // console.log('sender : ', sender) // not useful
         break;
       }
@@ -236,8 +233,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   });
-
-  onChangedData();
 
 })
 
